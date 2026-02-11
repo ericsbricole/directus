@@ -1,0 +1,52 @@
+name: Build Directus Dev Docker
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-dev-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout du code
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Node & pnpm
+      - name: Setup Node & pnpm
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.29.3 --activate
+
+      # Installer les dépendances et build Directus
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build API and App
+        run: pnpm --filter api --filter app recursive run build
+
+      # Build l'image Docker
+      - name: Build Docker image
+        run: |
+          docker build -t directus-dev .
+        shell: bash
+
+      # Sauvegarder l'image pour téléchargement
+      - name: Save Docker image
+        run: |
+          docker save directus-dev | gzip > directus-dev.tar.gz
+        shell: bash
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v3
+        with:
+          name: directus-dev-image
+          path: directus-dev.tar.gz
