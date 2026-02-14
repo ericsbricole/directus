@@ -1,52 +1,32 @@
-name: Build Directus Dev Docker
+name: Build Dev Docker Image
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build-dev-image:
+  build-dev:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout du code
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Node & pnpm
-      - name: Setup Node & pnpm
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.29.3 --activate
-
-      # Installer les dépendances et build Directus
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build API and App
-        run: pnpm --filter api --filter app recursive run build
-
-      # Build l'image Docker
       - name: Build Docker image
         run: |
           docker build -t directus-dev .
-        shell: bash
 
-      # Sauvegarder l'image pour téléchargement
-      - name: Save Docker image
+      - name: Save Docker image to file
         run: |
-          docker save directus-dev | gzip > directus-dev.tar.gz
-        shell: bash
+          docker save directus-dev -o directus-dev.tar
 
-      - name: Upload Docker image
-        uses: actions/upload-artifact@v3
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
         with:
           name: directus-dev-image
-          path: directus-dev.tar.gz
+          path: directus-dev.tar
